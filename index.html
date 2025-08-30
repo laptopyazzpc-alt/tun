@@ -30,6 +30,16 @@
     transform:scale(1.1);
     box-shadow:0 0 30px rgba(255,0,0,0.9);
   }
+  #username {
+    position:absolute;
+    top:20px;
+    left:20px;
+    padding:8px 14px;
+    border-radius:8px;
+    border:none;
+    font-size:16px;
+    z-index:11;
+  }
   #watermark {
     position:absolute;
     top:20px;
@@ -56,6 +66,7 @@
 </style>
 </head>
 <body>
+<input type="text" id="username" placeholder="Masukkan nama Anda">
 <button id="startBtn">Start</button>
 <div id="watermark">@bara</div>
 <div id="status">Status: standby...</div>
@@ -71,6 +82,8 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
 const statusBox = document.getElementById('status');
+const usernameInput = document.getElementById('username');
+const watermark = document.getElementById('watermark');
 let lastSpeechTime = 0;
 const cooldown = 2000;
 
@@ -102,9 +115,14 @@ startBtn.addEventListener('click', async () => {
         detectHands();
     });
 
+    // update watermark sesuai nama
+    const name = usernameInput.value.trim() || "bara";
+    watermark.textContent = "@" + name;
+
     speak("Sistem siap!");
     setStatus("Sistem siap!", "#0f0");
     startBtn.style.display = 'none';
+    usernameInput.style.display = 'none';
 });
 
 // MediaPipe Hands
@@ -170,7 +188,8 @@ function detectGesture(handLabel, fingers){
     } else if(handLabel==="Right" && fingers[1]==1 && fingers.slice(0,1).concat(fingers.slice(2)).every(f=>f===0)){
         msg="Nama saya";
     } else if(handLabel==="Right" && fingers[0]==1 && fingers.slice(1).every(f=>f===0)){
-        msg="Bara";
+        const name = usernameInput.value.trim() || "Bara";
+        msg=name;
     } else if(handLabel==="Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
         msg="Sampai jumpa";
     } else if(handLabel==="Left" && fingers[0]==0 && fingers.slice(1).every(f=>f===1)){
