@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gesture + Efek Darah Realistis</title>
+<title>Gesture + Efek Darah Dramatis</title>
 <style>
   body { margin:0; overflow:hidden; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
   canvas { position:absolute; top:0; left:0; }
@@ -41,7 +41,6 @@ function speak(text){
         utter.rate = 1;
         utter.pitch = 1;
         synth.speak(utter);
-        console.log("Speech triggered:", text);
     }
 }
 
@@ -69,7 +68,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Garis darah rapi & hidup
+// Efek garis: putih luar + merah dalam
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],
@@ -79,19 +78,26 @@ function drawBloodLines(landmarks){
         [0,17],[17,18],[18,19],[19,20]
     ];
 
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-
     connections.forEach(([i,j]) => {
         const x1 = landmarks[i].x*canvas.width;
         const y1 = landmarks[i].y*canvas.height;
         const x2 = landmarks[j].x*canvas.width;
         const y2 = landmarks[j].y*canvas.height;
+        const mx = (x1 + x2)/2 + (Math.random()-0.5)*6;
+        const my = (y1 + y2)/2 + (Math.random()-0.5)*6;
 
-        const mx = (x1 + x2)/2 + (Math.random()-0.5)*8;
-        const my = (y1 + y2)/2 + (Math.random()-0.5)*8;
+        // Garis putih luar
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1,y1);
+        ctx.quadraticCurveTo(mx,my,x2,y2);
+        ctx.stroke();
 
+        // Garis merah dalam
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x1,y1);
         ctx.quadraticCurveTo(mx,my,x2,y2);
@@ -101,33 +107,38 @@ function drawBloodLines(landmarks){
 
 // Status jari
 function getFingers(landmarks){
-    const thumb = landmarks[4].x < landmarks[3].x ? 1 : 0; // kanan tetap kanan layar
+    const thumb = landmarks[4].x < landmarks[3].x ? 1 : 0;
     const fingers = [8,12,16,20].map(i => landmarks[i].y < landmarks[i-2].y ? 1 : 0);
     return [thumb,...fingers];
 }
 
-// Gesture realistis
+// Gesture lebih natural
 function detectGesture(handLabel, fingers){
     const now = Date.now();
     if(now - lastSpeechTime < cooldown) return;
 
+    // Halo → semua jari tangan kanan
     if(handLabel==="Right" && fingers.every(f=>f===1)){
         speak("Halo");
         lastSpeechTime = now;
     }
+    // Nama saya → jari telunjuk kanan
     else if(handLabel==="Right" && fingers[1]==1 && fingers.slice(0,1).concat(fingers.slice(2)).every(f=>f===0)){
         speak("Nama saya");
         lastSpeechTime = now;
     }
+    // Bara → jempol kanan
     else if(handLabel==="Right" && fingers[0]==1 && fingers.slice(1).every(f=>f===0)){
         speak("Bara");
         lastSpeechTime = now;
     }
+    // Sampai jumpa → 2 jari hormat
     else if(handLabel==="Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
         speak("Sampai jumpa");
         lastSpeechTime = now;
     }
-    else if(handLabel==="Left" && fingers[0]==0 && fingers[1]==1 && fingers[2]==1 && fingers[3]==1 && fingers[4]==1){
+    // Love you → semua jari kecuali jempol tangan kiri
+    else if(handLabel==="Left" && fingers[0]==0 && fingers.slice(1).every(f=>f===1)){
         speak("Love you");
         lastSpeechTime = now;
     }
@@ -138,10 +149,9 @@ hands.onResults(results => {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     if(video.readyState >= 2){
-        // Balik horizontal canvas supaya tangan kanan tetap kanan layar
         ctx.save();
         ctx.scale(-1,1);
-        ctx.drawImage(video, -canvas.width,0,canvas.width,canvas.height);
+        ctx.drawImage(video,-canvas.width,0,canvas.width,canvas.height);
         ctx.restore();
     }
 
