@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gesture + Efek Darah</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  body { margin: 0; overflow: hidden; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
   canvas { position: absolute; top: 0; left: 0; }
+  video { display: none; }
 </style>
 </head>
 <body>
-<video id="video" autoplay playsinline style="display:none;"></video>
+<video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
@@ -31,13 +33,15 @@ function speak(text){
     }
 }
 
-// Set video & canvas size
+// Start camera
 navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
     video.srcObject = stream;
 });
+
 video.addEventListener('loadeddata', () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    detectHands(); // mulai loop setelah video siap
 });
 
 // Inisialisasi MediaPipe Hands
@@ -49,13 +53,14 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
+// Hasil deteksi
 hands.onResults(results => {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
     if(results.multiHandLandmarks && results.multiHandedness){
         results.multiHandLandmarks.forEach((landmarks, index) => {
-            // 🔹 Gambar garis merah antar sendi
+            // 🔹 Garis merah antar sendi tangan
             for(let i=0;i<landmarks.length-1;i++){
                 const x1 = landmarks[i].x*canvas.width;
                 const y1 = landmarks[i].y*canvas.height;
@@ -78,13 +83,18 @@ hands.onResults(results => {
 
             const now = Date.now();
             if(now - lastSpeechTime > cooldown){
+                // Right hand [0,1,0,0,0] → "Nama saya"
                 if(handLabel === "Right" && JSON.stringify(fingers.slice(0,5)) === "[0,1,0,0,0]"){
                     speak("Nama saya");
                     lastSpeechTime = now;
-                } else if(handLabel === "Left" && JSON.stringify(fingers.slice(0,5)) === "[1,1,1,1,1]"){
+                } 
+                // Left hand [1,1,1,1,1] → "Bara"
+                else if(handLabel === "Left" && JSON.stringify(fingers.slice(0,5)) === "[1,1,1,1,1]"){
                     speak("Bara");
                     lastSpeechTime = now;
-                } else if(handLabel === "Right" && JSON.stringify(fingers.slice(0,5)) === "[0,1,1,0,0]"){
+                } 
+                // Right hand [0,1,1,0,0] → "Sampai jumpa"
+                else if(handLabel === "Right" && JSON.stringify(fingers.slice(0,5)) === "[0,1,1,0,0]"){
                     speak("Sampai jumpa");
                     lastSpeechTime = now;
                 }
@@ -95,10 +105,11 @@ hands.onResults(results => {
 
 // Looping frame
 async function detectHands(){
-    await hands.send({image: video});
+    if(video.readyState >= 2){
+        await hands.send({image: video});
+    }
     requestAnimationFrame(detectHands);
 }
-video.addEventListener('playing', detectHands);
 </script>
 </body>
 </html>
