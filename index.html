@@ -56,7 +56,6 @@ startBtn.addEventListener('click', async () => {
         detectHands();
     });
 
-    // Pindahkan speak di klik tombol agar browser tidak memblokir
     speak("Sistem siap!");
     startBtn.style.display = 'none';
 });
@@ -70,7 +69,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Fungsi menggambar garis darah antar jari lebih smooth
+// Fungsi menggambar garis darah antar jari
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],       // Jempol
@@ -93,6 +92,13 @@ function drawBloodLines(landmarks){
         ctx.lineTo(x2,y2);
         ctx.stroke();
     });
+}
+
+// Fungsi mendeteksi jari (adaptasi kamera depan)
+function getFingers(landmarks){
+    const thumb = landmarks[4].x < landmarks[3].x ? 1 : 0; // Thumb
+    const fingers = [8,12,16,20].map(i => landmarks[i].y < landmarks[i-2].y ? 1 : 0);
+    return [thumb,...fingers];
 }
 
 // Gesture detection
@@ -132,12 +138,7 @@ hands.onResults(results => {
     if(results.multiHandLandmarks && results.multiHandedness){
         results.multiHandLandmarks.forEach((landmarks, index) => {
             drawBloodLines(landmarks);
-
-            const fingers = landmarks.map((lm,i)=>{
-                if([4,8,12,16,20].includes(i)) return landmarks[i].y < landmarks[i-2].y ? 1 : 0;
-                return 0;
-            }).slice(0,5);
-
+            const fingers = getFingers(landmarks);
             const handLabel = results.multiHandedness[index].label;
             detectGesture(handLabel, fingers);
         });
