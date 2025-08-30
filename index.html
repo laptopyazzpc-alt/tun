@@ -47,7 +47,7 @@ function speak(text){
 
 // Start button
 startBtn.addEventListener('click', async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); // non-mirror
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true }); // kamera non-mirror default
     video.srcObject = stream;
 
     video.addEventListener('loadeddata', () => {
@@ -69,7 +69,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Fungsi gambar garis darah lebih rapi & natural
+// Garis darah lebih rapi & sedikit melengkung
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],       // Jempol
@@ -89,7 +89,6 @@ function drawBloodLines(landmarks){
         const x2 = landmarks[j].x*canvas.width;
         const y2 = landmarks[j].y*canvas.height;
 
-        // Membuat garis sedikit melengkung untuk efek aliran darah
         const mx = (x1 + x2) / 2 + (Math.random()-0.5)*10; 
         const my = (y1 + y2) / 2 + (Math.random()-0.5)*10;
 
@@ -100,32 +99,41 @@ function drawBloodLines(landmarks){
     });
 }
 
-// Mendapatkan status jari
+// Status jari
 function getFingers(landmarks){
-    const thumb = landmarks[4].x > landmarks[3].x ? 1 : 0; // thumb kanan/lawan mirror
+    const thumb = landmarks[4].x > landmarks[3].x ? 1 : 0;
     const fingers = [8,12,16,20].map(i => landmarks[i].y < landmarks[i-2].y ? 1 : 0);
     return [thumb,...fingers];
 }
 
-// Gesture detection
+// Deteksi gesture sesuai permintaan
 function detectGesture(handLabel, fingers){
     const now = Date.now();
     if(now - lastSpeechTime < cooldown) return;
 
-    if(handLabel === "Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
-        speak("Sampai jumpa");
-        lastSpeechTime = now;
-    }
-    else if(handLabel === "Right" && fingers.every(f=>f==1)){
+    // Halo → semua jari tangan kanan
+    if(handLabel==="Right" && fingers.every(f=>f===1)){
         speak("Halo");
         lastSpeechTime = now;
     }
-    else if(handLabel === "Left" && fingers.every(f=>f==1)){
+    // Nama saya → jari telunjuk tangan kanan
+    else if(handLabel==="Right" && fingers[1]==1 && fingers[0]==0 && fingers[2]==0 && fingers[3]==0 && fingers[4]==0){
+        speak("Nama saya");
+        lastSpeechTime = now;
+    }
+    // Bara → jempol tangan kanan
+    else if(handLabel==="Right" && fingers[0]==1 && fingers.slice(1).every(f=>f===0)){
         speak("Bara");
         lastSpeechTime = now;
     }
-    else if(handLabel === "Right" && fingers[1]==1 && fingers.slice(0,1).concat(fingers.slice(2)).every(f=>f==0)){
-        speak("Nama saya");
+    // Sampai jumpa → 2 jari hormat (telunjuk+ tengah)
+    else if(fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
+        speak("Sampai jumpa");
+        lastSpeechTime = now;
+    }
+    // Love you → 4 jari ke mulut (telunjuk, tengah, manis, kelingking)
+    else if(fingers[0]==0 && fingers[1]==1 && fingers[2]==1 && fingers[3]==1 && fingers[4]==1){
+        speak("Love you");
         lastSpeechTime = now;
     }
 }
@@ -157,4 +165,3 @@ async function detectHands(){
 </script>
 </body>
 </html>
-
