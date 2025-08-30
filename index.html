@@ -8,9 +8,17 @@
   body { margin: 0; overflow: hidden; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
   canvas { position: absolute; top: 0; left: 0; }
   video { display: none; }
+  #startBtn {
+    position: absolute;
+    z-index: 10;
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
+<button id="startBtn">Start</button>
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
@@ -23,6 +31,7 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let lastSpeechTime = 0;
 const cooldown = 2000; // 2 detik
+const startBtn = document.getElementById('startBtn');
 
 // Inisialisasi Web Speech API
 const synth = window.speechSynthesis;
@@ -33,15 +42,20 @@ function speak(text){
     }
 }
 
-// Start camera
-navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+// Start button event
+startBtn.addEventListener('click', async () => {
+    // Mulai kamera
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
-});
 
-video.addEventListener('loadeddata', () => {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    detectHands(); // mulai loop setelah video siap
+    // Set canvas size saat video siap
+    video.addEventListener('loadeddata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        detectHands();
+        speak("Sistem siap!");
+        startBtn.style.display = 'none';
+    });
 });
 
 // Inisialisasi MediaPipe Hands
@@ -56,7 +70,9 @@ hands.setOptions({
 // Hasil deteksi
 hands.onResults(results => {
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    if(video.readyState >= 2){
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    }
 
     if(results.multiHandLandmarks && results.multiHandedness){
         results.multiHandLandmarks.forEach((landmarks, index) => {
@@ -83,17 +99,14 @@ hands.onResults(results => {
 
             const now = Date.now();
             if(now - lastSpeechTime > cooldown){
-                // Right hand [0,1,0,0,0] → "Nama saya"
                 if(handLabel === "Right" && JSON.stringify(fingers.slice(0,5)) === "[0,1,0,0,0]"){
                     speak("Nama saya");
                     lastSpeechTime = now;
                 } 
-                // Left hand [1,1,1,1,1] → "Bara"
                 else if(handLabel === "Left" && JSON.stringify(fingers.slice(0,5)) === "[1,1,1,1,1]"){
                     speak("Bara");
                     lastSpeechTime = now;
                 } 
-                // Right hand [0,1,1,0,0] → "Sampai jumpa"
                 else if(handLabel === "Right" && JSON.stringify(fingers.slice(0,5)) === "[0,1,1,0,0]"){
                     speak("Sampai jumpa");
                     lastSpeechTime = now;
