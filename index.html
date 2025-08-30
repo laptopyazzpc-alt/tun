@@ -42,13 +42,12 @@ function speak(text){
     }
 }
 
-// Start button
+// Start button untuk mengaktifkan kamera & suara
 startBtn.addEventListener('click', async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "environment"} });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }); // kamera depan
     video.srcObject = stream;
 
     video.addEventListener('loadeddata', () => {
-        // Sesuaikan canvas dengan layar HP
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         detectHands();
