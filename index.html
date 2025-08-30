@@ -31,29 +31,34 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
 let lastSpeechTime = 0;
-const cooldown = 2000; // 2 detik
+const cooldown = 2000;
 
 // Web Speech API
 const synth = window.speechSynthesis;
 function speak(text){
     if(!synth.speaking){
         const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1;
+        utter.pitch = 1;
         synth.speak(utter);
+        console.log("Speech triggered:", text);
     }
 }
 
-// Start button untuk mengaktifkan kamera & suara
+// Start button
 startBtn.addEventListener('click', async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }); // kamera depan
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
     video.srcObject = stream;
 
     video.addEventListener('loadeddata', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         detectHands();
-        speak("Sistem siap!");
-        startBtn.style.display = 'none';
     });
+
+    // Pindahkan speak di klik tombol agar browser tidak memblokir
+    speak("Sistem siap!");
+    startBtn.style.display = 'none';
 });
 
 // MediaPipe Hands
@@ -65,7 +70,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Fungsi menggambar garis merah antar sendi lebih rapi
+// Fungsi menggambar garis darah antar jari lebih smooth
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],       // Jempol
@@ -74,8 +79,10 @@ function drawBloodLines(landmarks){
         [0,13],[13,14],[14,15],[15,16],// Manis
         [0,17],[17,18],[18,19],[19,20] // Kelingking
     ];
+
     ctx.strokeStyle = "red";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
     connections.forEach(([i,j]) => {
         const x1 = landmarks[i].x*canvas.width;
         const y1 = landmarks[i].y*canvas.height;
@@ -126,7 +133,6 @@ hands.onResults(results => {
         results.multiHandLandmarks.forEach((landmarks, index) => {
             drawBloodLines(landmarks);
 
-            // Hitung fingers array
             const fingers = landmarks.map((lm,i)=>{
                 if([4,8,12,16,20].includes(i)) return landmarks[i].y < landmarks[i-2].y ? 1 : 0;
                 return 0;
