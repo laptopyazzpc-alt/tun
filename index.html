@@ -5,20 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gesture + Efek Darah Dramatis</title>
 <style>
-  body { margin:0; overflow:hidden; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
+  body {
+    margin:0; overflow:hidden; background:#000;
+    display:flex; justify-content:center; align-items:center;
+    height:100vh; font-family: Arial, sans-serif;
+  }
   canvas { position:absolute; top:0; left:0; }
   video { display:none; }
   #startBtn {
     position:absolute;
     z-index:10;
-    padding:10px 20px;
-    font-size:18px;
+    padding:12px 26px;
+    font-size:20px;
     cursor:pointer;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,#ff0000,#660000);
+    color:white;
+    font-weight:bold;
+    box-shadow:0 0 20px rgba(255,0,0,0.7);
+    transition:0.3s;
+  }
+  #startBtn:hover {
+    transform:scale(1.1);
+    box-shadow:0 0 30px rgba(255,0,0,0.9);
+  }
+  #watermark {
+    position:absolute;
+    top:20px;
+    right:30px;
+    font-size:22px;
+    color:#fff;
+    font-weight:bold;
+    text-shadow:0 0 10px red;
+    z-index:5;
+  }
+  #status {
+    position:absolute;
+    bottom:15px;
+    left:20px;
+    color:#0f0;
+    font-size:16px;
+    font-family:monospace;
+    background:rgba(0,0,0,0.6);
+    padding:6px 12px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,255,0,0.6);
+    z-index:5;
   }
 </style>
 </head>
 <body>
 <button id="startBtn">Start</button>
+<div id="watermark">@bara</div>
+<div id="status">Status: standby...</div>
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
 
@@ -30,6 +70,7 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
+const statusBox = document.getElementById('status');
 let lastSpeechTime = 0;
 const cooldown = 2000;
 
@@ -44,6 +85,12 @@ function speak(text){
     }
 }
 
+// Update status box
+function setStatus(text,color="#0f0"){
+    statusBox.textContent = "Status: " + text;
+    statusBox.style.color = color;
+}
+
 // Start button
 startBtn.addEventListener('click', async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -56,6 +103,7 @@ startBtn.addEventListener('click', async () => {
     });
 
     speak("Sistem siap!");
+    setStatus("Sistem siap!", "#0f0");
     startBtn.style.display = 'none';
 });
 
@@ -68,7 +116,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Efek garis: putih luar + merah dalam (sudah mirror)
+// Efek garis darah
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],
@@ -79,7 +127,6 @@ function drawBloodLines(landmarks){
     ];
 
     connections.forEach(([i,j]) => {
-        // Mirror koordinat x supaya garis sesuai video
         const x1 = canvas.width - landmarks[i].x * canvas.width;
         const y1 = landmarks[i].y * canvas.height;
         const x2 = canvas.width - landmarks[j].x * canvas.width;
@@ -87,7 +134,6 @@ function drawBloodLines(landmarks){
         const mx = (x1 + x2)/2 + (Math.random()-0.5)*6;
         const my = (y1 + y2)/2 + (Math.random()-0.5)*6;
 
-        // Garis putih luar
         ctx.strokeStyle = "white";
         ctx.lineWidth = 6;
         ctx.lineCap = "round";
@@ -96,7 +142,6 @@ function drawBloodLines(landmarks){
         ctx.quadraticCurveTo(mx,my,x2,y2);
         ctx.stroke();
 
-        // Garis merah dalam
         ctx.strokeStyle = "red";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -113,39 +158,33 @@ function getFingers(landmarks){
     return [thumb,...fingers];
 }
 
-// Gesture lebih natural
+// Gesture detect
 function detectGesture(handLabel, fingers){
     const now = Date.now();
     if(now - lastSpeechTime < cooldown) return;
 
-    // Halo → semua jari tangan kanan
+    let msg = null;
+
     if(handLabel==="Right" && fingers.every(f=>f===1)){
-        speak("Halo");
-        lastSpeechTime = now;
+        msg="Halo";
+    } else if(handLabel==="Right" && fingers[1]==1 && fingers.slice(0,1).concat(fingers.slice(2)).every(f=>f===0)){
+        msg="Nama saya";
+    } else if(handLabel==="Right" && fingers[0]==1 && fingers.slice(1).every(f=>f===0)){
+        msg="Bara";
+    } else if(handLabel==="Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
+        msg="Sampai jumpa";
+    } else if(handLabel==="Left" && fingers[0]==0 && fingers.slice(1).every(f=>f===1)){
+        msg="Love you";
     }
-    // Nama saya → jari telunjuk kanan
-    else if(handLabel==="Right" && fingers[1]==1 && fingers.slice(0,1).concat(fingers.slice(2)).every(f=>f===0)){
-        speak("Nama saya");
-        lastSpeechTime = now;
-    }
-    // Bara → jempol kanan
-    else if(handLabel==="Right" && fingers[0]==1 && fingers.slice(1).every(f=>f===0)){
-        speak("Bara");
-        lastSpeechTime = now;
-    }
-    // Sampai jumpa → 2 jari hormat
-    else if(handLabel==="Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
-        speak("Sampai jumpa");
-        lastSpeechTime = now;
-    }
-    // Love you → semua jari kecuali jempol tangan kiri
-    else if(handLabel==="Left" && fingers[0]==0 && fingers.slice(1).every(f=>f===1)){
-        speak("Love you");
+
+    if(msg){
+        speak(msg);
+        setStatus("Gesture: " + msg, "#ff0");
         lastSpeechTime = now;
     }
 }
 
-// Hasil deteksi MediaPipe
+// Hasil deteksi
 hands.onResults(results => {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -166,7 +205,7 @@ hands.onResults(results => {
     }
 });
 
-// Looping frame
+// Loop
 async function detectHands(){
     if(video.readyState >= 2){
         await hands.send({image: video});
