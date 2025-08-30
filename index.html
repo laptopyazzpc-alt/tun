@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gesture + Efek Darah Realistis</title>
+<title>Gesture + Efek Darah Dramatis</title>
 <style>
   body { margin:0; overflow:hidden; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
   canvas { position:absolute; top:0; left:0; }
@@ -68,7 +68,7 @@ hands.setOptions({
     minTrackingConfidence: 0.7
 });
 
-// Efek garis darah: putih luar + merah dalam
+// Efek garis: putih luar + merah dalam
 function drawBloodLines(landmarks){
     const connections = [
         [0,1],[1,2],[2,3],[3,4],
@@ -86,7 +86,7 @@ function drawBloodLines(landmarks){
         const mx = (x1 + x2)/2 + (Math.random()-0.5)*6;
         const my = (y1 + y2)/2 + (Math.random()-0.5)*6;
 
-        // Putih luar
+        // Garis putih luar
         ctx.strokeStyle = "white";
         ctx.lineWidth = 6;
         ctx.lineCap = "round";
@@ -95,7 +95,7 @@ function drawBloodLines(landmarks){
         ctx.quadraticCurveTo(mx,my,x2,y2);
         ctx.stroke();
 
-        // Merah dalam
+        // Garis merah dalam
         ctx.strokeStyle = "red";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -107,12 +107,12 @@ function drawBloodLines(landmarks){
 
 // Status jari
 function getFingers(landmarks){
-    const thumb = landmarks[4].x < landmarks[3].x ? 1 : 0; // kanan tetap kanan layar
+    const thumb = landmarks[4].x < landmarks[3].x ? 1 : 0;
     const fingers = [8,12,16,20].map(i => landmarks[i].y < landmarks[i-2].y ? 1 : 0);
     return [thumb,...fingers];
 }
 
-// Gesture realistis
+// Gesture lebih natural
 function detectGesture(handLabel, fingers){
     const now = Date.now();
     if(now - lastSpeechTime < cooldown) return;
@@ -132,7 +132,7 @@ function detectGesture(handLabel, fingers){
         speak("Bara");
         lastSpeechTime = now;
     }
-    // Sampai jumpa → 2 jari hormat tangan kanan
+    // Sampai jumpa → 2 jari hormat
     else if(handLabel==="Right" && fingers[1]==1 && fingers[2]==1 && fingers[0]==0 && fingers[3]==0 && fingers[4]==0){
         speak("Sampai jumpa");
         lastSpeechTime = now;
@@ -150,19 +150,16 @@ hands.onResults(results => {
 
     if(video.readyState >= 2){
         ctx.save();
-        ctx.scale(-1,1); // Flip untuk visual
+        ctx.scale(-1,1);
         ctx.drawImage(video,-canvas.width,0,canvas.width,canvas.height);
         ctx.restore();
     }
 
     if(results.multiHandLandmarks && results.multiHandedness){
         results.multiHandLandmarks.forEach((landmarks,index)=>{
-            // Swap label agar gesture mengikuti tangan asli
-            let handLabel = results.multiHandedness[index].label;
-            handLabel = handLabel === "Right" ? "Left" : "Right";
-
             drawBloodLines(landmarks);
             const fingers = getFingers(landmarks);
+            const handLabel = results.multiHandedness[index].label;
             detectGesture(handLabel,fingers);
         });
     }
